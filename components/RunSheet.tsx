@@ -299,6 +299,7 @@ function Now({ now, state, dept }: { now: number; state: ShowState; dept: Dept }
       text = (
         <>
           {items[0].kind === "doors" ? "Dørene åpner " : "Første post "}
+          {new Date(now).toDateString() !== new Date(first).toDateString() && "torsdag 24. september "}
           <span className="num">{hhmm(first, true)}</span>
         </>
       );

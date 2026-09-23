@@ -69,10 +69,16 @@ export function delayFor(item: Item, state: ShowState): number {
   return state.delay[item.block] ?? 0;
 }
 
-/** Projisert start i ms (epoch) for dagens dato. */
-export function startAt(item: Item, state: ShowState, day: Date): number {
-  const d = new Date(day);
-  d.setHours(0, 0, 0, 0);
+/** Showdagen (lokal tid på enheten). Alle tider i kjøreplanen gjelder denne datoen. */
+export const SHOW_DATE = { year: 2026, month: 9, day: 24 };
+
+export function showDay(): Date {
+  return new Date(SHOW_DATE.year, SHOW_DATE.month - 1, SHOW_DATE.day);
+}
+
+/** Projisert start i ms (epoch). `_day` beholdes for kompatibilitet; tidene ankres alltid til showdagen. */
+export function startAt(item: Item, state: ShowState, _day?: Date): number {
+  const d = showDay();
   return d.getTime() + (item.start + delayFor(item, state)) * 60_000;
 }
 

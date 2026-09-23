@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { EMPTY_STATE, type ShowState } from "@/lib/schedule";
+import { EMPTY_STATE, showDay, type ShowState } from "@/lib/schedule";
 
 /**
  * Klokke som tikker 4 ganger i sekundet.
@@ -13,7 +13,8 @@ export function useNow(): number | null {
     const t = new URLSearchParams(location.search).get("t")?.match(/^(\d{1,2}):(\d{2})$/);
     let offset = 0;
     if (t) {
-      const sim = new Date();
+      // Simulert tid gjelder showdagen, så ?t= fungerer også før 24. september.
+      const sim = showDay();
       sim.setHours(Number(t[1]), Number(t[2]), 0, 0);
       offset = sim.getTime() - Date.now();
     }
