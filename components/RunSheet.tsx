@@ -30,12 +30,19 @@ const DEPTS: { id: Dept; label: string }[] = [
 /** Standby-varsel når neste post starter innen dette. */
 const STANDBY_MS = 60_000;
 
+/** Høyden på den faste fanelinja – det som havner under den regnes som ute av syne. */
+const BAR_MARGIN = "-60px 0px 0px 0px";
+
 export default function RunSheet() {
   const now = useNow();
   const { state, mode, update } = useShowState();
   const [dept, setDept] = usePref<Dept>("magien:dept", "alle");
   const [regi, setRegi] = useState(false);
   const [stage, setStage] = useState(false);
+  const [topEl, setTopEl] = useState<HTMLElement | null>(null);
+  const [msgEl, setMsgEl] = useState<HTMLElement | null>(null);
+  const topVisible = useInView(topEl);
+  const msgVisible = useInView(msgEl, BAR_MARGIN);
   useWakeLock();
 
   useEffect(() => {
@@ -59,9 +66,11 @@ export default function RunSheet() {
 
   if (stage) return <StageView now={now} state={state} onExit={() => setStage(false)} />;
 
+  const showFlag = Boolean(state.message) && !msgVisible;
+
   return (
     <main className={regi ? "wrap regi-on" : "wrap"}>
-      <header className="top">
+      <header className="top" ref={setTopEl}>
         <div className="brand">
           <p>Kjøreplan</p>
           <h1>Magien 2026</h1>
@@ -72,16 +81,32 @@ export default function RunSheet() {
         </div>
       </header>
 
-      <nav className="tabs" aria-label="Avdeling">
-        {DEPTS.map((d) => (
-          <button key={d.id} aria-pressed={dept === d.id} onClick={() => setDept(d.id)}>
-            {d.label}
-          </button>
-        ))}
-      </nav>
+      <div className="tabbar">
+        <nav className="tabs" aria-label="Avdeling">
+          {DEPTS.map((d) => (
+            <button key={d.id} aria-pressed={dept === d.id} onClick={() => setDept(d.id)}>
+              {d.label}
+            </button>
+          ))}
+        </nav>
+        {(showFlag || !topVisible) && (
+          <div className="tabbar-aside">
+            {showFlag && (
+              <button className="msg-flag" onClick={() => scrollTo({ top: 0, behavior: "smooth" })}>
+                Beskjed
+              </button>
+            )}
+            {!topVisible && (
+              <span className="mini-clock num" aria-hidden="true">
+                {hhmm(now, true)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       {state.message && (
-        <div className="message" role="status">
+        <div className="message" role="status" ref={setMsgEl}>
           <Icon name="megaphone" />
           <div>
             <p className="message-from">Beskjed fra regi</p>
@@ -93,8 +118,8 @@ export default function RunSheet() {
       <div className="layout">
         <div className="side">
           <Now now={now} state={state} dept={dept} />
-          <Next now={now} state={state} dept={dept} />
           {regi && <Regi now={now} state={state} update={update} mode={mode} onGo={go} />}
+          <Next now={now} state={state} dept={dept} />
         </div>
 
         <div className="main">
@@ -126,6 +151,49 @@ export default function RunSheet() {
         </button>
       </footer>
     </main>
+  );
+}
+
+/** Er elementet synlig i vinduet? (true til vi vet noe annet, og når elementet ikke finnes.) */
+function useInView(el: Element | null, rootMargin = "0px") {
+  const [inView, setInView] = useState(true);
+  useEffect(() => {
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [el, rootMargin]);
+  return el ? inView : true;
+}
+
+/* Visningstekst. Rå titler brukes fortsatt i aria-label og bekreftelsesdialogen. */
+
+/** «DAGSARRANGEMENT SLUTT - OMRIGG» → «Dagsarrangement slutt – omrigg», « - » → « – ». */
+function displayTitle(raw: string) {
+  let t = raw.trim();
+  const letters = t.replace(/[^\p{L}]/gu, "");
+  if (letters.length > 3 && letters === letters.toLocaleUpperCase("nb") && letters !== letters.toLocaleLowerCase("nb")) {
+    t = t.toLocaleLowerCase("nb");
+    t = t.charAt(0).toLocaleUpperCase("nb") + t.slice(1);
+  }
+  return t.replace(/\s+-\s+/g, " – ");
+}
+
+/** Type-etiketten, men ikke når tittelen allerede begynner med den («Pause», «Keynote – Hedne»). */
+function kindLabel(item: Item): string | null {
+  const label = KIND_LABEL[item.kind];
+  const t = displayTitle(item.title).toLocaleLowerCase("nb");
+  const l = label.toLocaleLowerCase("nb");
+  return t.startsWith(l) && !/\p{L}/u.test(t.charAt(l.length)) ? null : label;
+}
+
+function Range({ from, to }: { from: number; to: number }) {
+  return (
+    <>
+      {hhmm(from, true)}
+      <span className="dash">–</span>
+      {hhmm(to, true)}
+    </>
   );
 }
 
@@ -224,20 +292,30 @@ function Now({ now, state, dept }: { now: number; state: ShowState; dept: Dept }
   const { current, currentStart } = pos;
   if (!current || currentStart === null) {
     const first = startAt(items[0], state, new Date(now));
-    const before = now < first;
-    const label = pos.next ? (before ? "Før start" : "Buffer") : "Ferdig for i dag";
-    const hint = pos.next
-      ? before
-        ? `Første post starter ${hhmm(first, true)}`
-        : "Ingen post akkurat nå"
-      : "Takk for innsatsen";
+    let lead = "Ferdig for i dag";
+    let text: React.ReactNode = "Takk for innsatsen";
+    if (pos.next && now < first) {
+      lead = "Før start";
+      text = (
+        <>
+          {items[0].kind === "doors" ? "Dørene åpner " : "Første post "}
+          <span className="num">{hhmm(first, true)}</span>
+        </>
+      );
+    } else if (pos.next && pos.nextStart !== null) {
+      lead = "Nå";
+      text = (
+        <>
+          Ingen post – neste <span className="num">{hhmm(pos.nextStart, true)}</span>
+        </>
+      );
+    }
     return (
-      <section className="card now idle">
-        <p className="card-label">
-          <b>Nå</b>
+      <section className="card now idle" aria-label="Nå">
+        <p>
+          <b>{lead}</b>
+          <span>{text}</span>
         </p>
-        <h2 className="title">{label}</h2>
-        <p className="sub">{hint}</p>
       </section>
     );
   }
@@ -245,18 +323,19 @@ function Now({ now, state, dept }: { now: number; state: ShowState; dept: Dept }
   const left = end - now;
   const progress = Math.min(1, Math.max(0, (now - currentStart) / (current.duration * 60_000 || 1)));
   const status = left < 0 ? "over" : left < 60_000 ? "soon" : "";
+  const kind = kindLabel(current);
   return (
     <section className={`card now ${status}`}>
       <div className="card-head">
         <p className="card-label">
           <b>Nå</b>
-          <span>{KIND_LABEL[current.kind]}</span>
+          {kind && <span>{kind}</span>}
         </p>
         <p className="range num">
-          {hhmm(currentStart, true)}–{hhmm(end, true)}
+          <Range from={currentStart} to={end} />
         </p>
       </div>
-      <h2 className="title">{current.title}</h2>
+      <h2 className="title">{displayTitle(current.title)}</h2>
       {pos.manual && (
         <p className="sub">
           <span>
@@ -284,32 +363,30 @@ function Next({ now, state, dept }: { now: number; state: ShowState; dept: Dept 
   const waiting = manual && nextStart <= now;
   const standby = waiting || until <= STANDBY_MS;
   const shownStart = waiting ? startAt(next, state, new Date(now)) : nextStart;
+  const kind = kindLabel(next);
   return (
     <section className={standby ? "card next standby" : "card next"}>
-      <div className="next-grid">
-        <div className="next-text">
-          <p className="card-label">
-            <b>{standby ? "Standby" : "Neste"}</b>
-            <span>{KIND_LABEL[next.kind]}</span>
-          </p>
-          <h2 className="title">{next.title}</h2>
-          <p className="sub">
-            <span>
-              {waiting && "Planlagt "}
-              <span className="num">{hhmm(shownStart, true)}</span>
-            </span>
-            <span>{next.duration} min</span>
-          </p>
-        </div>
+      <div className="card-head">
+        <p className="card-label">
+          <b>{standby ? "Standby" : "Neste"}</b>
+          {kind && <span>{kind}</span>}
+        </p>
         {waiting ? (
-          <p className="wait">Venter på GO</p>
+          <p className="next-when wait">Venter på GO</p>
         ) : (
-          <p className="count small">
-            <span className="count-label">om</span>
-            <span className="count-num num">{countdown(until)}</span>
+          <p className="next-when">
+            om <span className="num">{countdown(until)}</span>
           </p>
         )}
       </div>
+      <h2 className="title">{displayTitle(next.title)}</h2>
+      <p className="sub">
+        <span>
+          {waiting && "Planlagt "}
+          <span className="num">{hhmm(shownStart, true)}</span>
+        </span>
+        <span>{next.duration} min</span>
+      </p>
       <Cues item={next} dept={dept} />
     </section>
   );
@@ -357,7 +434,9 @@ function Timeline({
         {groups.map((g) => {
           const visible = g.items.filter((i) => showPast || !isDone(i));
           if (!visible.length) return null;
-          const from = startAt(g.items[0], state, day);
+          // Ferdige poster har allerede skjedd – forsinkelse skal ikke flytte blokkens start bakover.
+          const first = g.items[0];
+          const from = isDone(first) ? startAt(first, { ...state, delay: {} }, day) : startAt(first, state, day);
           const to = endAt(g.items[g.items.length - 1], state, day);
           return (
             <li key={g.block + g.items[0].id} className="group">
@@ -365,7 +444,7 @@ function Timeline({
                 <h2>{BLOCK_LABEL[g.block]}</h2>
                 <DelayTag minutes={state.delay[g.block] ?? 0} />
                 <span className="group-span num">
-                  {hhmm(from, true)}–{hhmm(to, true)}
+                  <Range from={from} to={to} />
                 </span>
               </div>
               <ol className="rows">
@@ -374,12 +453,16 @@ function Timeline({
                   const done = isDone(i);
                   const isNow = i.id === currentId;
                   const cue = dept === "alle" ? null : deptCue(i, dept);
+                  const quiet = dept !== "alle" && !cue && !isNow;
                   const shifted = hhmm(start, true) !== hhmm(i.start);
+                  const kind = kindLabel(i);
+                  // Posten regi har trykket GO på kan ikke startes på nytt herfra.
+                  const canStart = onGo && state.live?.id !== i.id;
                   return (
                     <li
                       key={i.id}
                       data-id={i.id}
-                      className={["item", `k-${i.kind}`, done && "done", isNow && "is-now", dept !== "alle" && !cue && "quiet"]
+                      className={["item", `k-${i.kind}`, done && "done", isNow && "is-now", quiet && "quiet"]
                         .filter(Boolean)
                         .join(" ")}
                     >
@@ -391,25 +474,29 @@ function Timeline({
                         <KindIcon kind={i.kind} />
                       </div>
                       <div className="what">
-                        <div className="what-head">
-                          <div className="what-title">
-                            <p className="name">{i.title}</p>
-                            <p className="meta">
-                              {isNow && <b>Pågår</b>}
-                              <span>{KIND_LABEL[i.kind]}</span>
-                              <span>{i.duration} min</span>
-                            </p>
+                        <p className="name">{displayTitle(i.title)}</p>
+                        {(!quiet || canStart) && (
+                          <div className="meta">
+                            {isNow && <b>Pågår</b>}
+                            {!quiet && kind && <span>{kind}</span>}
+                            {!quiet && <span>{i.duration} min</span>}
+                            {canStart && (
+                              <button
+                                className="row-go"
+                                onClick={() => {
+                                  if (!confirm(`Start «${i.title}» nå?`)) return;
+                                  onGo(i);
+                                  // På mobil: vis Nå og GO for det som kommer etter.
+                                  if (matchMedia("(max-width: 1079px)").matches) scrollTo(0, 0);
+                                }}
+                                aria-label={`Start ${i.title} nå`}
+                              >
+                                <Icon name="play" />
+                                Start
+                              </button>
+                            )}
                           </div>
-                          {onGo && state.live?.id !== i.id && (
-                            <button
-                              className="row-go"
-                              onClick={() => confirm(`Start «${i.title}» nå?`) && onGo(i)}
-                              aria-label={`Start ${i.title} nå`}
-                            >
-                              Start
-                            </button>
-                          )}
-                        </div>
+                        )}
                         {dept === "alle" ? (
                           <Cues item={i} dept={dept} />
                         ) : (
@@ -465,7 +552,7 @@ function Regi({
           <span className="go-word">GO</span>
           <span className="go-target">
             <small>Neste</small>
-            <span>{target.title}</span>
+            <span>{displayTitle(target.title)}</span>
           </span>
           <Icon name="play" />
         </button>
@@ -485,6 +572,7 @@ function Regi({
 
       {pos.manual && (
         <button className="release" onClick={() => update({ ...state, live: null })}>
+          <Icon name="undo" />
           Slipp GO – følg klokka
         </button>
       )}
@@ -497,9 +585,11 @@ function Regi({
         }}
       >
         <input value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Beskjed til crew…" maxLength={200} />
-        <button type="submit">Send</button>
+        <button type="submit" className="primary">
+          Send
+        </button>
         {state.message && (
-          <button type="button" className="ghost" onClick={() => update({ ...state, message: "" })}>
+          <button type="button" onClick={() => update({ ...state, message: "" })}>
             Fjern
           </button>
         )}
@@ -509,7 +599,7 @@ function Regi({
 }
 
 function StageView({ now, state, onExit }: { now: number; state: ShowState; onExit: () => void }) {
-  const { current, currentStart, next, nextStart } = position(now, state);
+  const { current, currentStart, next, nextStart, manual } = position(now, state);
   const left = current && currentStart !== null ? currentStart + current.duration * 60_000 - now : null;
   const tone = left === null ? "" : left < 0 ? "over" : left < 60_000 ? "soon" : left < 2 * 60_000 ? "warn" : "ok";
   const progress =
@@ -517,6 +607,9 @@ function StageView({ now, state, onExit }: { now: number; state: ShowState; onEx
       ? Math.min(1, Math.max(0, (now - currentStart) / (current.duration * 60_000 || 1)))
       : null;
   const label = left !== null ? (left < 0 ? "Over tid" : "Igjen") : nextStart ? "Til neste post" : "";
+  const big = left !== null ? countdown(left) : nextStart ? countdown(nextStart - now) : "—";
+  // Regi har trykket GO og posten går over tid: neste starter når regi sier fra, ikke på et klokkeslett.
+  const waiting = manual && nextStart !== null && nextStart <= now;
   return (
     <main className={`stage ${tone}`} onClick={onExit} title="Trykk for å gå tilbake">
       <header className="stage-top">
@@ -525,15 +618,23 @@ function StageView({ now, state, onExit }: { now: number; state: ShowState; onEx
       </header>
       <div className="stage-center">
         {label && <p className="stage-label">{label}</p>}
-        <div className="stage-big num">{left !== null ? countdown(left) : nextStart ? countdown(nextStart - now) : "—"}</div>
-        <p className="stage-title">{current ? current.title : next ? `Neste: ${next.title}` : "Ferdig for i dag"}</p>
+        <div className={big.length > 5 ? "stage-big long num" : "stage-big num"}>{big}</div>
+        <p className="stage-title">
+          {current ? displayTitle(current.title) : next ? `Neste: ${displayTitle(next.title)}` : "Ferdig for i dag"}
+        </p>
       </div>
       <footer className="stage-bottom">
         {current && next && nextStart && (
           <p className="stage-next">
-            <span>Neste</span>
-            <span className="num">{hhmm(nextStart, true)}</span>
-            <span className="stage-next-title">{next.title}</span>
+            {waiting ? (
+              <span>Neste – venter på GO</span>
+            ) : (
+              <>
+                <span>Neste</span>
+                <span className="num">{hhmm(nextStart, true)}</span>
+              </>
+            )}
+            <span className="stage-next-title">{displayTitle(next.title)}</span>
           </p>
         )}
       </footer>
@@ -554,7 +655,8 @@ type IconName =
   | "expand"
   | "sliders"
   | "chevron"
-  | "play";
+  | "play"
+  | "undo";
 
 const ICONS: Record<IconName, React.ReactNode> = {
   bumper: <path d="M8.5 6.2v11.6a.7.7 0 0 0 1.1.6l8.8-5.8a.7.7 0 0 0 0-1.2L9.6 5.6a.7.7 0 0 0-1.1.6z" />,
@@ -618,6 +720,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
     </>
   ),
   chevron: <path d="M6 9l6 6 6-6" />,
+  undo: <path d="M9 14L4.5 9.5 9 5M4.5 9.5H15a5 5 0 0 1 0 10h-3" />,
 };
 
 function Icon({ name }: { name: IconName }) {
