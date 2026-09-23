@@ -69,6 +69,11 @@ Post-id-er (`r01`–`r43`) står i `data/schedule.json`.
 > Vercel: Deployment Protection må være av (eller bruk en *Protection Bypass for Automation*-token som header
 > `x-vercel-protection-bypass` i Companion), ellers blir kallene stoppet av Vercel-innlogging.
 
+## Papirbackup
+
+`public/kjoreplan-2026-09-24.pdf` (A4 liggende, 4 sider) har alle poster med Lyd/Lys/AV/Obs og en tom «Faktisk»-kolonne.
+Den ligger også på `https://magien-kjoreplan-lumaia.vercel.app/kjoreplan-2026-09-24.pdf`. #-nummeret er det samme som `n=` i Companion.
+
 ## Oppdatere kjøreplanen
 
 Når Excel-filen endres:
