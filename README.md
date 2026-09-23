@@ -17,6 +17,12 @@ Kjøreplan for crew som web-app (Next.js, deployes på Vercel). Åpne på mobil,
 - Skjermen holdes våken, og appen kan legges til på hjemskjermen.
 - Appen virker uten nett når den først er lastet, fordi tidene følger klokka på enheten.
 
+## Deploy til Vercel
+
+1. vercel.com → **Add New → Project** → importer `munderhaug/Magien` (Next.js oppdages automatisk). Prosjektet `magien-kjoreplan` i Lumaia-teamet finnes allerede; koble repoet under **Settings → Git** der.
+2. **Settings → Deployment Protection**: sett Vercel Authentication til *Standard Protection*, eller slå den av. Da kan crew åpne produksjons-URL-en uten Vercel-innlogging.
+3. Hver push til branchen deployer automatisk.
+
 ## Lenker til crew
 
 | Hvem | URL |
