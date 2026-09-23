@@ -17,6 +17,11 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data" / "Kj_replan.xlsx"
 OUT = ROOT / "data" / "schedule.json"
 
+# Rettelser som ikke er ført inn i Excel ennå: tittel -> felt som overstyres.
+OVERRIDES = {
+    "Deja Vu - Dans": {"start": "21:05"},  # står som 20:05 i Excel, riktig er 21:05
+}
+
 
 def minutes(v):
     """Excel-tid / 'hh:mm'-tekst -> minutter etter midnatt (eller varighet i minutter)."""
@@ -71,7 +76,8 @@ def main():
         title = clean(row[idx["Post"]])
         if not title:
             continue
-        start = minutes(row[idx["Start"]])
+        fix = OVERRIDES.get(title, {})
+        start = minutes(fix.get("start", row[idx["Start"]]))
         dur = minutes(row[idx["Varighet"]]) or 0
         if start is None:
             continue

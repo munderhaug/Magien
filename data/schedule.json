@@ -1,8 +1,6 @@
 {
   "source": "Kj_replan.xlsx",
-  "warnings": [
-    "«Deja Vu - Dans» (20:05) står etter «Hedne - Resultat nettverkslek» (20:40) i Excel – sortert på klokkeslett."
-  ],
+  "warnings": [],
   "items": [
     {
       "id": "r01",
@@ -473,18 +471,6 @@
       "note": null
     },
     {
-      "id": "r42",
-      "title": "Deja Vu - Dans",
-      "start": 1205,
-      "duration": 5,
-      "block": "kveld",
-      "kind": "act",
-      "sound": "Lyd fra PC",
-      "light": "HipHop",
-      "av": null,
-      "note": null
-    },
-    {
       "id": "r40",
       "title": "Annie Torkilhildsen - Trapes fra satelitt",
       "start": 1215,
@@ -505,6 +491,18 @@
       "kind": "act",
       "sound": "1 stk mygg",
       "light": null,
+      "av": null,
+      "note": null
+    },
+    {
+      "id": "r42",
+      "title": "Deja Vu - Dans",
+      "start": 1265,
+      "duration": 5,
+      "block": "kveld",
+      "kind": "act",
+      "sound": "Lyd fra PC",
+      "light": "HipHop",
       "av": null,
       "note": null
     },
