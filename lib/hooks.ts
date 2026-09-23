@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { EMPTY_STATE, showDay, type ShowState } from "@/lib/schedule";
+import { EMPTY_STATE, SHOW_DAY_MS, type ShowState } from "@/lib/schedule";
 
 /**
  * Klokke som tikker 4 ganger i sekundet.
@@ -14,9 +14,7 @@ export function useNow(): number | null {
     let offset = 0;
     if (t) {
       // Simulert tid gjelder showdagen, så ?t= fungerer også før 24. september.
-      const sim = showDay();
-      sim.setHours(Number(t[1]), Number(t[2]), 0, 0);
-      offset = sim.getTime() - Date.now();
+      offset = SHOW_DAY_MS + (Number(t[1]) * 60 + Number(t[2])) * 60_000 - Date.now();
     }
     const tick = () => setNow(Date.now() + offset);
     tick();
@@ -74,7 +72,8 @@ export function useShowState() {
             writeLocal(CACHE_KEY, json.state);
           }
           setMode("live");
-          timer = setTimeout(poll, 2000);
+          // Pause når fanen er skjult (sparer Redis-kall); hentes straks igjen ved retur.
+          timer = setTimeout(poll, document.visibilityState === "hidden" ? 15000 : 2000);
           return;
         }
         if (json.error) throw new Error(json.error);
@@ -89,12 +88,19 @@ export function useShowState() {
       }
     };
     poll();
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      clearTimeout(timer);
+      poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     const onStorage = (e: StorageEvent) => e.key === LOCAL_KEY && setState(readLocal(LOCAL_KEY));
     addEventListener("storage", onStorage);
     return () => {
       stop = true;
       clearTimeout(timer);
       removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
 

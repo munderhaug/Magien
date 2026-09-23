@@ -69,17 +69,24 @@ export function delayFor(item: Item, state: ShowState): number {
   return state.delay[item.block] ?? 0;
 }
 
-/** Showdagen (lokal tid på enheten). Alle tider i kjøreplanen gjelder denne datoen. */
-export const SHOW_DATE = { year: 2026, month: 9, day: 24 };
+/**
+ * Showdagen: torsdag 24. september 2026, midnatt i Oslo (CEST, UTC+2).
+ * Fast UTC-tidspunkt, så server (Vercel kjører UTC) og alle enheter regner likt.
+ */
+export const SHOW_DAY_MS = Date.UTC(2026, 8, 24) - 2 * 3_600_000;
+
+/** Er tidspunktet (ms) på showdagen i Oslo? */
+export function isShowDay(ms: number): boolean {
+  return ms >= SHOW_DAY_MS && ms < SHOW_DAY_MS + 86_400_000;
+}
 
 export function showDay(): Date {
-  return new Date(SHOW_DATE.year, SHOW_DATE.month - 1, SHOW_DATE.day);
+  return new Date(SHOW_DAY_MS);
 }
 
 /** Projisert start i ms (epoch). `_day` beholdes for kompatibilitet; tidene ankres alltid til showdagen. */
 export function startAt(item: Item, state: ShowState, _day?: Date): number {
-  const d = showDay();
-  return d.getTime() + (item.start + delayFor(item, state)) * 60_000;
+  return SHOW_DAY_MS + (item.start + delayFor(item, state)) * 60_000;
 }
 
 export function endAt(item: Item, state: ShowState, day: Date): number {
@@ -129,10 +136,8 @@ export function position(now: number, state: ShowState): Position {
 }
 
 export function hhmm(minOrMs: number, isMs = false): string {
-  if (isMs) {
-    const d = new Date(minOrMs);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }
+  // Klokkeslett vises alltid i Oslo-tid (CEST), uansett tidssone på enheten.
+  if (isMs) minOrMs = Math.floor((minOrMs - SHOW_DAY_MS) / 60_000);
   const m = ((Math.round(minOrMs) % 1440) + 1440) % 1440;
   return `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 }
@@ -149,4 +154,14 @@ export function countdown(ms: number): string {
 
 function pad(n: number) {
   return String(n).padStart(2, "0");
+}
+
+/** GO: start posten nå, og regn ut forsinkelse for resten av blokken ut fra planlagt tid. */
+export function applyGo(state: ShowState, item: Item, now: number): ShowState {
+  const planned = startAt(item, { ...state, delay: {} });
+  return {
+    ...state,
+    live: { id: item.id, startedAt: now },
+    delay: { ...state.delay, [item.block]: Math.round((now - planned) / 6_000) / 10 },
+  };
 }

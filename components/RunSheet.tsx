@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import {
+  applyGo,
+  isShowDay,
   BLOCK_LABEL,
   KIND_LABEL,
   countdown,
@@ -54,15 +56,7 @@ export default function RunSheet() {
   if (now === null) return null;
   const pos = position(now, state);
 
-  // Start posten nå, og regn ut forsinkelse for resten av blokken ut fra planlagt tid.
-  function go(item: Item) {
-    const planned = startAt(item, { ...state, delay: {} }, new Date(now!));
-    update({
-      ...state,
-      live: { id: item.id, startedAt: now! },
-      delay: { ...state.delay, [item.block]: Math.round((now! - planned) / 6_000) / 10 },
-    });
-  }
+  const go = (item: Item) => update(applyGo(state, item, now));
 
   if (stage) return <StageView now={now} state={state} onExit={() => setStage(false)} />;
 
@@ -299,7 +293,7 @@ function Now({ now, state, dept }: { now: number; state: ShowState; dept: Dept }
       text = (
         <>
           {items[0].kind === "doors" ? "Dørene åpner " : "Første post "}
-          {new Date(now).toDateString() !== new Date(first).toDateString() && "torsdag 24. september "}
+          {!isShowDay(now) && "torsdag 24. september "}
           <span className="num">{hhmm(first, true)}</span>
         </>
       );
