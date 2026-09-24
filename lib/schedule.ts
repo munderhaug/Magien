@@ -188,5 +188,8 @@ export function applyBack(state: ShowState, now: number): ShowState | null {
 /** Tittelen på posten Tilbake vil gå til (for knappetekst). */
 export function backTarget(state: ShowState, now: number): Item | null {
   const next = applyBack(state, now);
-  return next?.live ? (items.find((i) => i.id === next.live!.id) ?? null) : null;
+  if (!next) return null;
+  // Tilbake til klokkestyrt: vis posten klokka sier går da.
+  if (!next.live) return position(now, next).current ?? position(now, next).next;
+  return items.find((i) => i.id === next.live!.id) ?? null;
 }

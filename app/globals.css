@@ -368,3 +368,12 @@ button { cursor: pointer; }
 .note-actions input { flex: 1 1 100%; }
 .note-actions button { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: none; color: var(--text-2); font: inherit; font-size: 14px; white-space: nowrap; }
 .note-actions button.primary { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); font-weight: 600; }
+
+/* Tilbake: sekundær knapp rett under GO */
+.back {
+  display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 8px; padding: 10px 14px;
+  background: none; border: 1px solid var(--line); border-radius: 12px; color: var(--text); font: inherit; text-align: left;
+}
+.back .icon { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.back .go-target small { color: var(--muted); }
+.back:active { background: var(--surface-2); }

@@ -653,6 +653,23 @@ function Regi({
         </button>
       )}
 
+      {backTo && (
+        <button
+          className="back"
+          onClick={() => {
+            if (!confirm(`Tilbake til «${backTo.title}»?`)) return;
+            const b = applyBack(state, now);
+            if (b) update(b);
+          }}
+        >
+          <Icon name="undo" />
+          <span className="go-target">
+            <small>Tilbake til</small>
+            <span>{displayTitle(backTo.title)}</span>
+          </span>
+        </button>
+      )}
+
       <div className="regi-delay">
         <p className="regi-sub">Forsinkelse {BLOCK_LABEL[block].toLowerCase()}</p>
         <b className={`num ${delay > 0 ? "late" : delay < 0 ? "early" : ""}`}>{delayText(delay)}</b>
@@ -665,19 +682,6 @@ function Regi({
         </div>
       </div>
 
-      {backTo && (
-        <button
-          className="release"
-          onClick={() => {
-            if (!confirm(`Tilbake til «${backTo.title}»?`)) return;
-            const b = applyBack(state, now);
-            if (b) update(b);
-          }}
-        >
-          <Icon name="undo" />
-          Tilbake til {displayTitle(backTo.title)}
-        </button>
-      )}
       {pos.manual && (
         <button className="release" onClick={() => update({ ...state, live: null })}>
           <Icon name="undo" />
