@@ -105,13 +105,12 @@ export type Position = {
   manual: boolean;
 };
 
-/** Hvor lenge en GO holder før vi faller tilbake til klokka (om regi glemmer å trykke videre). */
-const LIVE_GRACE_MS = 30 * 60_000;
 
 export function position(now: number, state: ShowState): Position {
   const day = new Date(now);
   const live = state.live && items.find((i) => i.id === state.live!.id);
-  if (live && state.live && now - state.live.startedAt < live.duration * 60_000 + LIVE_GRACE_MS) {
+  // Manuell styring: posten regi har startet står til neste GO – ingen automatisk videre (overtid telles).
+  if (live && state.live) {
     const next = items[items.indexOf(live) + 1] ?? null;
     return {
       current: live,
@@ -177,7 +176,14 @@ export function applyBack(state: ShowState, now: number): ShowState | null {
   const history = state.history ?? [];
   if (history.length) {
     const prev = history[history.length - 1];
-    return { ...state, live: prev.live, delay: prev.delay, history: history.slice(0, -1) };
+    let live = prev.live;
+    if (!live) {
+      // Forrige tilstand var klokkestyrt: lås posten klokka hadde da, med sin projiserte start.
+      const was = { ...state, live: null, delay: prev.delay };
+      const item = position(now, was).current ?? items.filter((i) => startAt(i, was) <= now).at(-1);
+      if (item) live = { id: item.id, startedAt: startAt(item, was) };
+    }
+    return { ...state, live, delay: prev.delay, history: history.slice(0, -1) };
   }
   const cur = position(now, state).current;
   const idx = cur ? items.indexOf(cur) : items.findIndex((i) => startAt(i, state) > now);
