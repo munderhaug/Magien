@@ -14,6 +14,8 @@ Kjøreplan for crew som web-app (Next.js, deployes på Vercel). Åpne på mobil,
   - **Start** på en post i lista hopper til den posten.
   - **±1 min** justerer forsinkelsen manuelt.
   - **Beskjed til crew** vises som gult banner hos alle.
+- **Notater** per post og fag (Lyd, Lys, AV, Regi): trykk «Notat» på en post. Alle ser notatet under riktig cue (live-synk, ca. 10 s).
+  Ingen PIN kreves for notater; navnet ditt huskes på enheten.
 - Skjermen holdes våken, og appen kan legges til på hjemskjermen.
 - Appen virker uten nett når den først er lastet, fordi tidene følger klokka på enheten.
 

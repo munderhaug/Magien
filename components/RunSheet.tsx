@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { createContext, Fragment, useContext, useEffect, useMemo, useState } from "react";
 import {
   applyGo,
   isShowDay,
@@ -20,7 +20,13 @@ import {
   type Kind,
   type ShowState,
 } from "@/lib/schedule";
-import { usePref, useNow, useShowState, useWakeLock, type SyncMode } from "@/lib/hooks";
+import { useNotes, usePref, useNow, useShowState, useWakeLock, type SyncMode } from "@/lib/hooks";
+import { NOTE_DEPTS, noteKey, type Note, type NoteDept, type Notes } from "@/lib/notes";
+
+const NotesCtx = createContext<{ notes: Notes; save: (id: string, d: NoteDept, text: string, by: string) => void }>({
+  notes: {},
+  save: () => {},
+});
 
 const DEPTS: { id: Dept; label: string }[] = [
   { id: "alle", label: "Alle" },
@@ -38,6 +44,7 @@ const BAR_MARGIN = "-60px 0px 0px 0px";
 export default function RunSheet() {
   const now = useNow();
   const { state, mode, update } = useShowState();
+  const notesApi = useNotes(mode);
   const [dept, setDept] = usePref<Dept>("magien:dept", "alle");
   const [regi, setRegi] = useState(false);
   const [stage, setStage] = useState(false);
@@ -63,6 +70,7 @@ export default function RunSheet() {
   const showFlag = Boolean(state.message) && !msgVisible;
 
   return (
+    <NotesCtx.Provider value={notesApi}>
     <main className={regi ? "wrap regi-on" : "wrap"}>
       <header className="top" ref={setTopEl}>
         <div className="brand">
@@ -145,6 +153,7 @@ export default function RunSheet() {
         </button>
       </footer>
     </main>
+    </NotesCtx.Provider>
   );
 }
 
@@ -246,28 +255,47 @@ function Breakable({ text }: { text: string }) {
   );
 }
 
+function UserNote({ note }: { note?: Note }) {
+  if (!note) return null;
+  return (
+    <span className="unote">
+      <Icon name="pen" />
+      {note.text}
+      {note.by && <em> · {note.by}</em>}
+    </span>
+  );
+}
+
 function Cues({ item, dept, large }: { item: Item; dept: Dept; large?: boolean }) {
+  const { notes } = useContext(NotesCtx);
+  const note = (d: NoteDept) => notes[noteKey(item.id, d)];
   if (dept !== "alle") {
     const cue = deptCue(item, dept);
+    const n = note(dept);
     return (
-      <p className={large ? "cue-one large" : "cue-one"}>
-        {cue ? <Breakable text={cue} /> : <span className="muted">Ingen cue</span>}
-      </p>
+      <div className={large ? "cue-one large" : "cue-one"}>
+        {cue ? <Breakable text={cue} /> : !n && <span className="muted">Ingen cue</span>}
+        <UserNote note={n} />
+      </div>
     );
   }
-  const rows = [
-    ["Lyd", item.sound],
-    ["Lys", item.light],
-    ["AV", item.av],
-  ].filter(([, v]) => v);
-  if (!rows.length && !item.note) return null;
+  const rows = (
+    [
+      ["lyd", "Lyd", item.sound],
+      ["lys", "Lys", item.light],
+      ["av", "AV", item.av],
+    ] as const
+  ).filter(([d, , v]) => v || note(d));
+  const regiNote = note("regi");
+  if (!rows.length && !item.note && !regiNote) return null;
   return (
     <dl className="cues">
-      {rows.map(([k, v]) => (
+      {rows.map(([d, k, v]) => (
         <div key={k}>
           <dt>{k}</dt>
           <dd>
-            <Breakable text={v!} />
+            {v && <Breakable text={v} />}
+            <UserNote note={note(d)} />
           </dd>
         </div>
       ))}
@@ -277,7 +305,71 @@ function Cues({ item, dept, large }: { item: Item; dept: Dept; large?: boolean }
           <dd>{item.note}</dd>
         </div>
       )}
+      {regiNote && (
+        <div>
+          <dt>Regi</dt>
+          <dd>
+            <UserNote note={regiNote} />
+          </dd>
+        </div>
+      )}
     </dl>
+  );
+}
+
+function NoteEditor({ item, dept, onClose }: { item: Item; dept: Dept; onClose: () => void }) {
+  const { notes, save } = useContext(NotesCtx);
+  const [d, setD] = useState<NoteDept>(dept === "alle" ? "lyd" : dept);
+  const existing = notes[noteKey(item.id, d)];
+  const [text, setText] = useState(existing?.text ?? "");
+  const [name, setName] = usePref<string>("magien:name", "");
+  useEffect(() => setText(notes[noteKey(item.id, d)]?.text ?? ""), [d]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <form
+      className="note-edit"
+      onSubmit={(e) => {
+        e.preventDefault();
+        save(item.id, d, text, name);
+        onClose();
+      }}
+    >
+      <div className="note-depts" role="group" aria-label="Fag">
+        {NOTE_DEPTS.map((x) => (
+          <button type="button" key={x.id} aria-pressed={d === x.id} onClick={() => setD(x.id)}>
+            {x.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={`Notat for ${NOTE_DEPTS.find((x) => x.id === d)!.label.toLowerCase()}…`}
+        maxLength={300}
+        rows={2}
+        autoFocus
+      />
+      <div className="note-actions">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ditt navn" maxLength={30} />
+        {existing && (
+          <button
+            type="button"
+            onClick={() => {
+              save(item.id, d, "", name);
+              onClose();
+            }}
+          >
+            Slett
+          </button>
+        )}
+        <button type="button" onClick={onClose}>
+          Avbryt
+        </button>
+        <button type="submit" className="primary">
+          Lagre
+        </button>
+      </div>
+    </form>
   );
 }
 
@@ -402,6 +494,8 @@ function Timeline({
 }) {
   const day = new Date(now);
   const [showPast, setShowPast] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const { notes } = useContext(NotesCtx);
   // Med en aktiv post er alt før den ferdig; ellers avgjør klokka.
   const currentIdx = items.findIndex((i) => i.id === currentId);
   const isDone = (i: Item) =>
@@ -448,7 +542,8 @@ function Timeline({
                   const done = isDone(i);
                   const isNow = i.id === currentId;
                   const cue = dept === "alle" ? null : deptCue(i, dept);
-                  const quiet = dept !== "alle" && !cue && !isNow;
+                  const deptNote = dept === "alle" ? undefined : notes[noteKey(i.id, dept)];
+                  const quiet = dept !== "alle" && !cue && !deptNote && !isNow;
                   const shifted = hhmm(start, true) !== hhmm(i.start);
                   const kind = kindLabel(i);
                   // Posten regi har trykket GO på kan ikke startes på nytt herfra.
@@ -470,11 +565,20 @@ function Timeline({
                       </div>
                       <div className="what">
                         <p className="name">{displayTitle(i.title)}</p>
-                        {(!quiet || canStart) && (
-                          <div className="meta">
-                            {isNow && <b>Pågår</b>}
-                            {!quiet && kind && <span>{kind}</span>}
-                            {!quiet && <span>{i.duration} min</span>}
+                        <div className="meta">
+                          {isNow && <b>Pågår</b>}
+                          {!quiet && kind && <span>{kind}</span>}
+                          {!quiet && <span>{i.duration} min</span>}
+                          <span className="row-actions">
+                            <button
+                              className="row-go"
+                              aria-expanded={editing === i.id}
+                              onClick={() => setEditing(editing === i.id ? null : i.id)}
+                              aria-label={`Notat til ${i.title}`}
+                            >
+                              <Icon name="pen" />
+                              Notat
+                            </button>
                             {canStart && (
                               <button
                                 className="row-go"
@@ -490,17 +594,10 @@ function Timeline({
                                 Start
                               </button>
                             )}
-                          </div>
-                        )}
-                        {dept === "alle" ? (
-                          <Cues item={i} dept={dept} />
-                        ) : (
-                          cue && (
-                            <p className="cue-one">
-                              <Breakable text={cue} />
-                            </p>
-                          )
-                        )}
+                          </span>
+                        </div>
+                        {dept === "alle" ? <Cues item={i} dept={dept} /> : (cue || deptNote) && <Cues item={i} dept={dept} />}
+                        {editing === i.id && <NoteEditor item={i} dept={dept} onClose={() => setEditing(null)} />}
                       </div>
                     </li>
                   );
@@ -651,7 +748,8 @@ type IconName =
   | "sliders"
   | "chevron"
   | "play"
-  | "undo";
+  | "undo"
+  | "pen";
 
 const ICONS: Record<IconName, React.ReactNode> = {
   bumper: <path d="M8.5 6.2v11.6a.7.7 0 0 0 1.1.6l8.8-5.8a.7.7 0 0 0 0-1.2L9.6 5.6a.7.7 0 0 0-1.1.6z" />,
@@ -716,6 +814,7 @@ const ICONS: Record<IconName, React.ReactNode> = {
   ),
   chevron: <path d="M6 9l6 6 6-6" />,
   undo: <path d="M9 14L4.5 9.5 9 5M4.5 9.5H15a5 5 0 0 1 0 10h-3" />,
+  pen: <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17zM14.5 7.5l2 2" />,
 };
 
 function Icon({ name }: { name: IconName }) {

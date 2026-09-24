@@ -348,3 +348,23 @@ button { cursor: pointer; }
   .count-num { font-size: 58px; }
   .stage { padding: 16px 16px 28px; }
 }
+
+/* Crew-notater */
+.row-actions { display: inline-flex; margin: -11px -10px -11px auto; }
+.row-actions .row-go { margin: 0; }
+.unote { display: block; color: var(--text); margin-top: 2px; }
+.unote .icon { display: inline-block; width: 12px; height: 12px; color: var(--gold); margin-right: 6px; vertical-align: -1px; }
+.unote em { font-style: normal; color: var(--muted); font-size: 0.86em; }
+.cue-one .unote { font-size: 15px; font-weight: 400; }
+.note-edit { margin-top: 10px; padding: 12px; display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.note-depts { display: flex; gap: 4px; }
+.note-depts button { flex: 1; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: none; color: var(--muted); font: inherit; font-size: 14px; }
+.note-depts button[aria-pressed="true"] { color: var(--gold-ink); background: var(--gold); border-color: var(--gold); font-weight: 600; }
+.note-edit textarea, .note-edit input {
+  width: 100%; min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg, #0e0e10); color: var(--text); font: inherit; font-size: 15px; resize: vertical;
+}
+.note-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.note-actions input { flex: 1 1 100%; }
+.note-actions button { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: none; color: var(--text-2); font: inherit; font-size: 14px; white-space: nowrap; }
+.note-actions button.primary { background: var(--gold); border-color: var(--gold); color: var(--gold-ink); font-weight: 600; }

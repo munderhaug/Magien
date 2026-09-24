@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { noteKey, type NoteDept, type Notes } from "@/lib/notes";
 import { EMPTY_STATE, SHOW_DAY_MS, type ShowState } from "@/lib/schedule";
 
 /**
@@ -180,4 +181,71 @@ export function usePref<T extends string>(key: string, initial: T): [T, (v: T) =
     [key],
   );
   return [value, set];
+}
+
+const NOTES_KEY = "magien:notes";
+
+/**
+ * Crew-notater per post og fag. Live: hentes fra /api/notes hvert 10. sekund (ikke når fanen er skjult).
+ * Lokal: lagres på enheten.
+ */
+export function useNotes(mode: SyncMode) {
+  const [notes, setNotes] = useState<Notes>({});
+
+  useEffect(() => {
+    if (mode === "local") {
+      try {
+        setNotes(JSON.parse(localStorage.getItem(NOTES_KEY) ?? "{}"));
+      } catch {}
+      return;
+    }
+    if (mode !== "live") return;
+    let stop = false;
+    const load = async () => {
+      if (document.visibilityState === "hidden") return;
+      try {
+        const json = await (await fetch("/api/notes", { cache: "no-store" })).json();
+        if (!stop && json.sync) setNotes(json.notes);
+      } catch {}
+    };
+    load();
+    const id = setInterval(load, 10_000);
+    document.addEventListener("visibilitychange", load);
+    return () => {
+      stop = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", load);
+    };
+  }, [mode]);
+
+  const save = useCallback(
+    async (id: string, dept: NoteDept, text: string, by: string) => {
+      const key = noteKey(id, dept);
+      const next = { ...notes };
+      if (text.trim()) next[key] = { text: text.trim(), by: by.trim(), at: Date.now() };
+      else delete next[key];
+      setNotes(next);
+      if (mode === "local") {
+        try {
+          localStorage.setItem(NOTES_KEY, JSON.stringify(next));
+        } catch {}
+        return;
+      }
+      try {
+        const res = await fetch("/api/notes", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, dept, text, by }),
+        });
+        const json = await res.json();
+        if (json.notes) setNotes(json.notes);
+        else throw new Error(json.error);
+      } catch {
+        alert("Fikk ikke lagret notatet – sjekk nettverket.");
+      }
+    },
+    [notes, mode],
+  );
+
+  return { notes, save };
 }
