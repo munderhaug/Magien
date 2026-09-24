@@ -66,6 +66,10 @@ export default function RunSheet() {
   const pos = position(now, state);
 
   const go = (item: Item) => update(applyGo(state, item, now));
+  const back = () => {
+    const b = applyBack(state, now);
+    if (b) update(b);
+  };
 
   if (stage) return <StageView now={now} state={state} onExit={() => setStage(false)} />;
 
@@ -133,6 +137,7 @@ export default function RunSheet() {
             dept={dept}
             currentId={pos.current?.id ?? null}
             onGo={regi ? go : undefined}
+            onBack={regi ? back : undefined}
           />
 
           {warnings.length > 0 && (
@@ -487,12 +492,14 @@ function Timeline({
   dept,
   currentId,
   onGo,
+  onBack,
 }: {
   now: number;
   state: ShowState;
   dept: Dept;
   currentId: string | null;
   onGo?: (item: Item) => void;
+  onBack?: () => void;
 }) {
   const day = new Date(now);
   const [showPast, setShowPast] = useState(false);
@@ -549,7 +556,9 @@ function Timeline({
                   const shifted = hhmm(start, true) !== hhmm(i.start);
                   const kind = kindLabel(i);
                   // Posten regi har trykket GO på kan ikke startes på nytt herfra.
-                  const canStart = onGo && state.live?.id !== i.id;
+                  const isLive = state.live?.id === i.id;
+                  const canStart = Boolean(onGo);
+                  const backTo = onBack && isLive ? backTarget(state, now) : null;
                   return (
                     <li
                       key={i.id}
@@ -585,15 +594,28 @@ function Timeline({
                               <button
                                 className="row-go"
                                 onClick={() => {
-                                  if (!confirm(`Start «${i.title}» nå?`)) return;
-                                  onGo(i);
+                                  if (!confirm(isLive ? `Start «${i.title}» på nytt?` : `Start «${i.title}» nå?`)) return;
+                                  onGo!(i);
                                   // På mobil: vis Nå og GO for det som kommer etter.
                                   if (matchMedia("(max-width: 1079px)").matches) scrollTo(0, 0);
                                 }}
                                 aria-label={`Start ${i.title} nå`}
                               >
                                 <Icon name="play" />
-                                Start
+                                {isLive ? "Omstart" : "Start"}
+                              </button>
+                            )}
+                            {backTo && (
+                              <button
+                                className="row-go"
+                                onClick={() => {
+                                  if (!confirm(`Angre – tilbake til «${backTo.title}»?`)) return;
+                                  onBack!();
+                                }}
+                                aria-label={`Tilbake til ${backTo.title}`}
+                              >
+                                <Icon name="undo" />
+                                Tilbake
                               </button>
                             )}
                           </span>

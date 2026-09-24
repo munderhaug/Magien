@@ -377,3 +377,5 @@ button { cursor: pointer; }
 .back .icon { width: 18px; height: 18px; color: var(--muted); flex: none; }
 .back .go-target small { color: var(--muted); }
 .back:active { background: var(--surface-2); }
+.row-actions { flex-wrap: wrap; justify-content: flex-end; }
+.row-actions .row-go { white-space: nowrap; }
