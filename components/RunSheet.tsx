@@ -534,7 +534,7 @@ function Timeline({
           if (!visible.length) return null;
           // Ferdige poster har allerede skjedd – forsinkelse skal ikke flytte blokkens start bakover.
           const first = g.items[0];
-          const from = isDone(first) ? startAt(first, { ...state, delay: {} }, day) : startAt(first, state, day);
+          const from = isDone(first) ? startAt(first, { ...state, delay: {}, live: null }, day) : startAt(first, state, day);
           const to = endAt(g.items[g.items.length - 1], state, day);
           return (
             <li key={g.block + g.items[0].id} className="group">

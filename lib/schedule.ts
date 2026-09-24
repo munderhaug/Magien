@@ -88,7 +88,33 @@ export function showDay(): Date {
 
 /** Projisert start i ms (epoch). `_day` beholdes for kompatibilitet; tidene ankres alltid til showdagen. */
 export function startAt(item: Item, state: ShowState, _day?: Date): number {
+  const chained = chainStart(item, state);
+  if (chained !== null) return chained;
   return SHOW_DAY_MS + (item.start + delayFor(item, state)) * 60_000;
+}
+
+/**
+ * Etter GO: postene etter den som går i samme blokk kjedes fra faktisk start + varighet
+ * (planlagte hull mellom poster beholdes). Manuell ±-justering av forsinkelsen legges på i tillegg.
+ */
+function chainStart(item: Item, state: ShowState): number | null {
+  const live = state.live;
+  if (!live) return null;
+  const li = items.findIndex((i) => i.id === live.id);
+  const ii = items.indexOf(item);
+  if (li < 0 || ii < li || items[li].block !== item.block) return null;
+  if (ii === li) return live.startedAt;
+  const liveItem = items[li];
+  const goOffset = (live.startedAt - (SHOW_DAY_MS + liveItem.start * 60_000)) / 60_000;
+  const extra = (state.delay[item.block] ?? 0) - goOffset; // manuell justering etter GO
+  let t = live.startedAt + liveItem.duration * 60_000;
+  for (let k = li + 1; k <= ii; k++) {
+    const gap = items[k].start - (items[k - 1].start + items[k - 1].duration);
+    t += Math.max(0, gap) * 60_000;
+    if (k === ii) return t + Math.round(extra * 10) * 6_000;
+    t += items[k].duration * 60_000;
+  }
+  return null;
 }
 
 export function endAt(item: Item, state: ShowState, day: Date): number {
@@ -159,7 +185,7 @@ function pad(n: number) {
 
 /** GO: start posten nå, og regn ut forsinkelse for resten av blokken ut fra planlagt tid. */
 export function applyGo(state: ShowState, item: Item, now: number): ShowState {
-  const planned = startAt(item, { ...state, delay: {} });
+  const planned = startAt(item, { ...state, delay: {}, live: null });
   return {
     ...state,
     history: [...(state.history ?? []), { live: state.live, delay: state.delay }].slice(-20),
