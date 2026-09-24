@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { applyGo, items, position, type Block, type ShowState } from "@/lib/schedule";
+import { applyBack, applyGo, items, position, type Block, type ShowState } from "@/lib/schedule";
 import { PIN, readState, syncEnabled, writeState } from "@/lib/store";
 import { statusOf } from "@/lib/status";
 
@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
  *   /api/control?action=go&pin=1234                → start neste post
  *   /api/control?action=start&id=r08&pin=…         → start en bestemt post (id eller n=8, 1-basert)
  *   /api/control?action=delay&add=1&pin=…          → juster forsinkelse (add=-1, set=0)
+ *   /api/control?action=back&pin=…                 → angre siste GO (tilbake til forrige post)
  *   /api/control?action=release&pin=…              → slipp GO, følg klokka
  *   /api/control?action=message&text=Hei&pin=…     → beskjed til crew (tom text fjerner)
  *   /api/control?action=clear&pin=…                → fjern beskjed
@@ -47,6 +48,12 @@ async function handle(req: Request) {
       next = { ...state, delay: { ...state.delay, [block]: value } };
       break;
     }
+    case "back": {
+      const b = applyBack(state, now);
+      if (!b) return err("Ingenting å gå tilbake til", 409);
+      next = b;
+      break;
+    }
     case "release":
       next = { ...state, live: null };
       break;
@@ -57,7 +64,7 @@ async function handle(req: Request) {
       next = { ...state, message: "" };
       break;
     default:
-      return err("Ukjent action (go, start, delay, release, message, clear)", 400);
+      return err("Ukjent action (go, back, start, delay, release, message, clear)", 400);
   }
 
   const saved = await writeState(next);

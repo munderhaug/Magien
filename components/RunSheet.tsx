@@ -2,7 +2,9 @@
 
 import { createContext, Fragment, useContext, useEffect, useMemo, useState } from "react";
 import {
+  applyBack,
   applyGo,
+  backTarget,
   isShowDay,
   BLOCK_LABEL,
   KIND_LABEL,
@@ -625,6 +627,7 @@ function Regi({
   onGo: (item: Item) => void;
 }) {
   const pos = position(now, state);
+  const backTo = backTarget(state, now);
   const target = pos.next;
   const block: Block = (pos.current ?? pos.next ?? items[items.length - 1]).block;
   const delay = Math.round(state.delay[block] ?? 0);
@@ -662,6 +665,19 @@ function Regi({
         </div>
       </div>
 
+      {backTo && (
+        <button
+          className="release"
+          onClick={() => {
+            if (!confirm(`Tilbake til «${backTo.title}»?`)) return;
+            const b = applyBack(state, now);
+            if (b) update(b);
+          }}
+        >
+          <Icon name="undo" />
+          Tilbake til {displayTitle(backTo.title)}
+        </button>
+      )}
       {pos.manual && (
         <button className="release" onClick={() => update({ ...state, live: null })}>
           <Icon name="undo" />

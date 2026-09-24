@@ -31,6 +31,8 @@ export type ShowState = {
   /** Kort beskjed til hele crewet. */
   message: string;
   updatedAt: number;
+  /** Tidligere GO-tilstander (nyeste sist), så regi kan angre en feil-cue. */
+  history?: { live: ShowState["live"]; delay: ShowState["delay"] }[];
 };
 
 export const EMPTY_STATE: ShowState = { delay: {}, live: null, message: "", updatedAt: 0 };
@@ -161,7 +163,30 @@ export function applyGo(state: ShowState, item: Item, now: number): ShowState {
   const planned = startAt(item, { ...state, delay: {} });
   return {
     ...state,
+    history: [...(state.history ?? []), { live: state.live, delay: state.delay }].slice(-20),
     live: { id: item.id, startedAt: now },
     delay: { ...state.delay, [item.block]: Math.round((now - planned) / 6_000) / 10 },
   };
+}
+
+/**
+ * Tilbake: angre siste GO/Start og gjenopprett forrige post med opprinnelig starttid og forsinkelse.
+ * Uten historikk: start posten før den som går nå. Returnerer null hvis det ikke finnes noe å gå tilbake til.
+ */
+export function applyBack(state: ShowState, now: number): ShowState | null {
+  const history = state.history ?? [];
+  if (history.length) {
+    const prev = history[history.length - 1];
+    return { ...state, live: prev.live, delay: prev.delay, history: history.slice(0, -1) };
+  }
+  const cur = position(now, state).current;
+  const idx = cur ? items.indexOf(cur) : items.findIndex((i) => startAt(i, state) > now);
+  const prevItem = idx > 0 ? items[idx - 1] : null;
+  return prevItem ? { ...applyGo(state, prevItem, now), history: [] } : null;
+}
+
+/** Tittelen på posten Tilbake vil gå til (for knappetekst). */
+export function backTarget(state: ShowState, now: number): Item | null {
+  const next = applyBack(state, now);
+  return next?.live ? (items.find((i) => i.id === next.live!.id) ?? null) : null;
 }

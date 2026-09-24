@@ -32,6 +32,7 @@ export async function writeState(body: Partial<ShowState>): Promise<ShowState> {
     live: body.live ?? null,
     message: String(body.message ?? "").slice(0, 200),
     updatedAt: Date.now(),
+    history: Array.isArray(body.history) ? body.history.slice(-20) : [],
   };
   await redis(["SET", KEY, JSON.stringify(state)]);
   return state;
