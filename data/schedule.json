@@ -126,18 +126,18 @@
       "id": "r11",
       "title": "Pause",
       "start": 855,
-      "duration": 20,
+      "duration": 25,
       "block": "dag",
       "kind": "pause",
       "sound": "Jone klargjøres og får mygg",
       "light": null,
-      "av": "5 min countdown kl 14:30",
+      "av": "5 min countdown kl 14:35",
       "note": "Bakgrunnsmusikk"
     },
     {
       "id": "r12",
       "title": "Bumper - Jone Voll Joakimsen",
-      "start": 875,
+      "start": 880,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -149,7 +149,7 @@
     {
       "id": "r13",
       "title": "Keynote - Jone Voll Joakimsen",
-      "start": 876,
+      "start": 881,
       "duration": 20,
       "block": "dag",
       "kind": "keynote",
@@ -161,7 +161,7 @@
     {
       "id": "r14",
       "title": "Skavlan Intervjuer Jone",
-      "start": 896,
+      "start": 901,
       "duration": 5,
       "block": "dag",
       "kind": "talk",
@@ -173,7 +173,7 @@
     {
       "id": "r15",
       "title": "Skavlan introduserer Per Ivar Nerseth",
-      "start": 901,
+      "start": 906,
       "duration": 2,
       "block": "dag",
       "kind": "host",
@@ -185,7 +185,7 @@
     {
       "id": "r16",
       "title": "Bumper - Per Ivar Nerseth",
-      "start": 903,
+      "start": 908,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -197,7 +197,7 @@
     {
       "id": "r17",
       "title": "Keynote - Per Ivar Nerseth",
-      "start": 904,
+      "start": 909,
       "duration": 10,
       "block": "dag",
       "kind": "keynote",
@@ -209,7 +209,7 @@
     {
       "id": "r18",
       "title": "Per Ivar introduserer neste sesjon og pause",
-      "start": 914,
+      "start": 919,
       "duration": 1,
       "block": "dag",
       "kind": "host",
@@ -221,19 +221,19 @@
     {
       "id": "r19",
       "title": "Pause",
-      "start": 915,
+      "start": 920,
       "duration": 20,
       "block": "dag",
       "kind": "pause",
       "sound": "To foredragsholdere klargjøres (2 stk mygg)",
       "light": null,
-      "av": "5 min countdown kl 15:30",
+      "av": "5 min countdown kl 15:35",
       "note": "Bakgrunnsmusikk"
     },
     {
       "id": "r20",
       "title": "Bumper - Stavanger Kommune",
-      "start": 935,
+      "start": 940,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -245,7 +245,7 @@
     {
       "id": "r21",
       "title": "Kundecase 1 - Stavanger kommune",
-      "start": 936,
+      "start": 941,
       "duration": 15,
       "block": "dag",
       "kind": "case",
@@ -257,7 +257,7 @@
     {
       "id": "r22",
       "title": "Bumper - Equinor: Procosys",
-      "start": 951,
+      "start": 956,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -269,7 +269,7 @@
     {
       "id": "r23",
       "title": "Kundecase 2 - Equinor: Procosys",
-      "start": 952,
+      "start": 957,
       "duration": 15,
       "block": "dag",
       "kind": "case",
@@ -281,7 +281,7 @@
     {
       "id": "r24",
       "title": "Bumper - Equinor: Avert",
-      "start": 967,
+      "start": 972,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -293,7 +293,7 @@
     {
       "id": "r25",
       "title": "Kundecase 3 - Equinor: Avert",
-      "start": 968,
+      "start": 973,
       "duration": 15,
       "block": "dag",
       "kind": "case",
@@ -305,7 +305,7 @@
     {
       "id": "r26",
       "title": "Bumper - Aker BP",
-      "start": 983,
+      "start": 988,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -317,7 +317,7 @@
     {
       "id": "r27",
       "title": "Kundecase 4 - Aker BP",
-      "start": 984,
+      "start": 989,
       "duration": 15,
       "block": "dag",
       "kind": "case",
@@ -329,7 +329,7 @@
     {
       "id": "r28",
       "title": "Bumper - SUS",
-      "start": 999,
+      "start": 1004,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -341,7 +341,7 @@
     {
       "id": "r29",
       "title": "Kundecase 5 - SUS",
-      "start": 1000,
+      "start": 1005,
       "duration": 15,
       "block": "dag",
       "kind": "case",
@@ -353,7 +353,7 @@
     {
       "id": "r30",
       "title": "Sofaprat - Skavlan prat med foredragsholdere (kunder)",
-      "start": 1015,
+      "start": 1020,
       "duration": 17,
       "block": "dag",
       "kind": "talk",
@@ -365,7 +365,7 @@
     {
       "id": "r31",
       "title": "Skavlan introduserer Hedne og pause",
-      "start": 1032,
+      "start": 1037,
       "duration": 3,
       "block": "dag",
       "kind": "host",
@@ -377,19 +377,19 @@
     {
       "id": "r32",
       "title": "Pause",
-      "start": 1035,
+      "start": 1040,
       "duration": 20,
       "block": "dag",
       "kind": "pause",
       "sound": "Hedne får mygg",
       "light": null,
-      "av": "5 min countdown kl 17:30",
+      "av": "5 min countdown kl 17:35",
       "note": null
     },
     {
       "id": "r33",
       "title": "Bumper - Hedne",
-      "start": 1055,
+      "start": 1060,
       "duration": 1,
       "block": "dag",
       "kind": "bumper",
@@ -401,7 +401,7 @@
     {
       "id": "r34",
       "title": "Keynote - Hedne",
-      "start": 1056,
+      "start": 1061,
       "duration": 20,
       "block": "dag",
       "kind": "keynote",
@@ -413,7 +413,7 @@
     {
       "id": "r35",
       "title": "Skavlan prat med Hedné",
-      "start": 1076,
+      "start": 1081,
       "duration": 15,
       "block": "dag",
       "kind": "talk",
@@ -425,7 +425,7 @@
     {
       "id": "r36",
       "title": "Hedne takker Skavlan for dagen + et tryllenummer",
-      "start": 1091,
+      "start": 1096,
       "duration": 10,
       "block": "dag",
       "kind": "act",

@@ -2,6 +2,8 @@
 
 import { createContext, Fragment, useContext, useEffect, useMemo, useState } from "react";
 import {
+  shiftMinutes,
+  shiftTimes,
   applyBack,
   applyGo,
   backTarget,
@@ -273,15 +275,18 @@ function UserNote({ note }: { note?: Note }) {
   );
 }
 
-function Cues({ item, dept, large }: { item: Item; dept: Dept; large?: boolean }) {
+function Cues({ item, dept, large, state }: { item: Item; dept: Dept; large?: boolean; state: ShowState }) {
   const { notes } = useContext(NotesCtx);
+  // Klokkeslett i cue-tekstene følger postens nye tid etter GO/forsinkelse.
+  const off = shiftMinutes(item, state);
+  const t = (v: string) => shiftTimes(v, off);
   const note = (d: NoteDept) => notes[noteKey(item.id, d)];
   if (dept !== "alle") {
     const cue = deptCue(item, dept);
     const n = note(dept);
     return (
       <div className={large ? "cue-one large" : "cue-one"}>
-        {cue ? <Breakable text={cue} /> : !n && <span className="muted">Ingen cue</span>}
+        {cue ? <Breakable text={t(cue)} /> : !n && <span className="muted">Ingen cue</span>}
         <UserNote note={n} />
       </div>
     );
@@ -301,7 +306,7 @@ function Cues({ item, dept, large }: { item: Item; dept: Dept; large?: boolean }
         <div key={k}>
           <dt>{k}</dt>
           <dd>
-            {v && <Breakable text={v} />}
+            {v && <Breakable text={t(v)} />}
             <UserNote note={note(d)} />
           </dd>
         </div>
@@ -309,7 +314,7 @@ function Cues({ item, dept, large }: { item: Item; dept: Dept; large?: boolean }
       {item.note && (
         <div className="note">
           <dt>Obs</dt>
-          <dd>{item.note}</dd>
+          <dd>{t(item.note)}</dd>
         </div>
       )}
       {regiNote && (
@@ -444,7 +449,7 @@ function Now({ now, state, dept }: { now: number; state: ShowState; dept: Dept }
       <div className="bar" role="progressbar" aria-label="Fremdrift" aria-valuenow={Math.round(progress * 100)}>
         <div style={{ width: `${progress * 100}%` }} />
       </div>
-      <Cues item={current} dept={dept} large />
+      <Cues item={current} dept={dept} state={state} large />
     </section>
   );
 }
@@ -481,7 +486,7 @@ function Next({ now, state, dept }: { now: number; state: ShowState; dept: Dept 
         </span>
         <span>{next.duration} min</span>
       </p>
-      <Cues item={next} dept={dept} />
+      <Cues item={next} dept={dept} state={state} />
     </section>
   );
 }
@@ -620,7 +625,7 @@ function Timeline({
                             )}
                           </span>
                         </div>
-                        {dept === "alle" ? <Cues item={i} dept={dept} /> : (cue || deptNote) && <Cues item={i} dept={dept} />}
+                        {dept === "alle" ? <Cues item={i} dept={dept} state={state} /> : (cue || deptNote) && <Cues item={i} dept={dept} state={state} />}
                         {editing === i.id && <NoteEditor item={i} dept={dept} onClose={() => setEditing(null)} />}
                       </div>
                     </li>

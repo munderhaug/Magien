@@ -18,6 +18,12 @@ SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data" / "Kj_replan.xls
 OUT = ROOT / "data" / "schedule.json"
 
 # Rettelser som ikke er ført inn i Excel ennå: tittel -> felt som overstyres.
+# Endret varighet per post-id (id = rekkefølge i Excel, r01…). Postene etter i samme blokk flyttes,
+# og klokkeslett i cue-tekstene («countdown kl 14:30») følger med.
+DURATION_OVERRIDES = {
+    "r11": 25,  # Første pause: 20 → 25 min (regi 24.09)
+}
+
 OVERRIDES = {
     "Deja Vu - Dans": {"start": "21:05"},  # står som 20:05 i Excel, riktig er 21:05
 }
@@ -42,6 +48,19 @@ def clean(v):
         return None
     s = re.sub(r"\s+", " ", str(v)).strip()
     return s or None
+
+
+TIME_RE = re.compile(r"\b([01]?\d|2[0-3]):([0-5]\d)\b")
+
+
+def shift_fields(item, delta, should_shift):
+    """Flytt klokkeslett (HH:MM) i cue-tekstene med `delta` minutter."""
+    def repl(m):
+        t = int(m.group(1)) * 60 + int(m.group(2))
+        return fmt(t + delta) if should_shift(t) else m.group(0)
+    for f in ("sound", "light", "av", "note"):
+        if item.get(f):
+            item[f] = TIME_RE.sub(repl, item[f])
 
 
 def fmt(m):
@@ -98,6 +117,19 @@ def main():
             items[-1]["block"] = "omrigg"
             block = "kveld"
     # Kjøreplanen følger klokka: sorter på starttid og varsle om avvik fra radrekkefølgen i Excel.
+    for item in items:
+        new = DURATION_OVERRIDES.get(item["id"])
+        if new is None or new == item["duration"]:
+            continue
+        delta, old_end = new - item["duration"], item["start"] + item["duration"]
+        item["duration"] = new
+        # Tider i postens egen tekst som ligger nærmest slutten, følger slutten.
+        shift_fields(item, delta, lambda t, s=item["start"], e=old_end: abs(t - e) < abs(t - s))
+        for other in items:
+            if other["block"] == item["block"] and other["start"] >= old_end:
+                other["start"] += delta
+                shift_fields(other, delta, lambda t: True)
+
     warnings = []
     for a, b in zip(items, items[1:]):
         if b["start"] < a["start"]:
