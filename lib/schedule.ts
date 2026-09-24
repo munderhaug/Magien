@@ -228,11 +228,12 @@ export function backTarget(state: ShowState, now: number): Item | null {
 
 /** Hvor mange minutter posten er flyttet i forhold til planen (etter GO/forsinkelse). */
 export function shiftMinutes(item: Item, state: ShowState): number {
-  return Math.round((startAt(item, state) - (SHOW_DAY_MS + item.start * 60_000)) / 60_000);
+  // Eksakt (desimal) forskyvning; avrundes nedover først når klokkeslettet vises – som postenes tider.
+  return (startAt(item, state) - (SHOW_DAY_MS + item.start * 60_000)) / 60_000;
 }
 
 /** Flytt klokkeslett i en cue-tekst («countdown kl 14:35») like mye som posten er flyttet. */
 export function shiftTimes(text: string, offset: number): string {
   if (!offset) return text;
-  return text.replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g, (_, h, m) => hhmm(Number(h) * 60 + Number(m) + offset));
+  return text.replace(/\b([01]?\d|2[0-3]):([0-5]\d)\b/g, (_, h, m) => hhmm(Math.floor(Number(h) * 60 + Number(m) + offset)));
 }
